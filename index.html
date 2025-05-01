@@ -1,0 +1,39 @@
+<!-- frontend/index.html -->
+<html lang="">
+  <body>
+    <video id="video" autoplay></video>
+    <button onclick="sendFrame()">Gửi Ảnh</button>
+    <p id="result"></p>
+
+    <script>
+      const video = document.getElementById("video");
+      const result = document.getElementById("result");
+
+      // Bật webcam
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+        });
+
+      function sendFrame() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 224; canvas.height = 224;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          const formData = new FormData();
+          formData.append("file", blob, "frame.jpg");
+
+          fetch("http://localhost:8000/predict", {
+            method: "POST",
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            result.textContent = "Dự đoán: " + data.result;
+          });
+        }, "image/jpeg");
+      }
+    </script>
+  </body>
+</html>
