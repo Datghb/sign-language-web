@@ -1,57 +1,61 @@
-<video id="videoElement" width="640" height="480" autoplay muted playsinline></video>
+<video id="videoElement" width="640" height="480" autoplay muted playsinline style="transform: scaleX(-1);"></video>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
 <script>
-const videoElement = document.getElementById('videoElement');
+    const videoElement = document.getElementById('videoElement');
 
-const hands = new Hands({
-  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
+    const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
 
-hands.setOptions({
-  maxNumHands: 1,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.8,
-  minTrackingConfidence: 0.8
-});
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.8,
+        minTrackingConfidence: 0.8
+    });
 
-hands.onResults(async (results) => {
-  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-    const landmarks = results.multiHandLandmarks[0].map(point => ({
-      x: point.x,
-      y: point.y,
-      z: point.z
-    }));
+    hands.onResults(async (results) => {
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0].map(point => ({
+                x: point.x,
+                y: point.y,
+                z: point.z
+            }));
 
-    try {
-  const res = await fetch("http://127.0.0.1:8000/predict", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ landmarks })  // gửi object {landmarks: ...}
-  });
+            while (landmarks.length < 42) {
+                landmarks.push({x: 0, y: 0, z: 0});
+            }
 
-  if (!res.ok) {
-    throw new Error(`HTTP status ${res.status}`);
-  }
+            try {
+                const res = await fetch("http://127.0.0.1:8000/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({landmarks})  // gửi object {landmarks: ...}
+                });
 
-  const data = await res.json();
-  console.log("Dự đoán:", data.prediction);
-} catch (err) {
-  console.error("❌ Lỗi khi gửi dữ liệu:", err);
-}
+                if (!res.ok) {
+                    throw new Error(`HTTP status ${res.status}`);
+                }
 
-  }
-});
+                const data = await res.json();
+                console.log("Dự đoán:", data.prediction);
+            } catch (err) {
+                console.error("❌ Lỗi khi gửi dữ liệu:", err);
+            }
 
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    await hands.send({ image: videoElement });
-  },
-  width: 640,
-  height: 480
-});
-camera.start();
+        }
+    });
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await hands.send({image: videoElement});
+        },
+        width: 640,
+        height: 480
+    });
+    camera.start();
 </script>
